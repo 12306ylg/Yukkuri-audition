@@ -4,7 +4,10 @@ import PySimpleGUI as sg
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+#use the new write transform
+import cust_utils
 
+'''
 def transform(text_path, aud_path):
     driver_path = os.getcwd() + "/chromedriver.exe"
 
@@ -117,6 +120,47 @@ def transform(text_path, aud_path):
         aud_num += 1
 
     driver.quit()
+    '''
+
+def show_options():
+    # 定义下拉菜单选项
+    option1 = ['ウォ', 'ウォ3', '我(ウォ)', '我(ウォ3)']
+    option2 = ['全角片假', '半角假名', '平假名']
+    option3 = ['AT1-F1', 'AT1-F2', 'AT1-M1', 'AT1-M2', 'AT1-DVD', 'AT1-IMD1', 'AT1-JGR', 'AT1-R1', 'AT2-RM', 'AT2-HUSKEY', 'AT2-M4B', 'AT2-MF1', 'AT2-RB2', 'AT2-RB3', 'AT2-ROBO', 'AT2-YUKKURI', 'AT2-F4', 'AT2-M5', 'AT2-MF2', 'AT2-RM3']
+
+    # 定义窗口布局
+    layout = [
+        [sg.Text('ltools翻译选项1'), sg.Combo(option1, key='-OPTION1-')],
+        [sg.Text('ltools翻译选项2'), sg.Combo(option2, key='-OPTION2-')],
+        [sg.Text('yukumo声线'), sg.Combo(option3, key='-OPTION3-')],
+        [sg.Button('确定'), sg.Button('取消')]
+    ]
+
+    # 创建窗口
+    window = sg.Window('选项窗口', layout)
+
+    # 事件循环
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == '取消':
+            break
+        if event == '确定':
+            selected_options = (values['-OPTION1-'], values['-OPTION2-'], values['-OPTION3-'])
+
+            option1_dict = {'ウォ': '1', 'ウォ3': '2', '我(ウォ)': '3', '我(ウォ3)': '4'}
+            option2_dict = {'全角片假': 'zenkaku', '半角假名': 'hankaku', '平假名': 'hirigana'}
+
+            user_select_list = []
+            user_select_list.append( option1_dict[selected_options[0]])
+            user_select_list.append(option2_dict[selected_options[1]]) 
+            user_select_list.append(selected_options[2].split('-')[1].lower()) 
+
+            window.close()
+            return user_select_list
+
+    # 关闭窗口
+    window.close()
+    return None
 
 
 def main():
@@ -138,7 +182,16 @@ def main():
 
     if event == "开始转化":
         text_path, aud_path = values["text"], values["aud"]
-        transform(text_path, aud_path)
+
+        user_select = show_options()
+
+        if(user_select == None):
+            exit()
+
+        for i in user_select:
+            print(i)
+
+        cust_utils.transform_request(text_path, aud_path, user_select[0], user_select[1], user_select[2])
         sg.popup("转化完成！此窗口将在五秒后自动关闭", title='', auto_close=True, auto_close_duration=5)
 
 
