@@ -23,7 +23,7 @@ jobs:
       - name: Run pyinstaller
         run: |
           python -m PyInstaller app.spec
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: app
           path: dist/app
