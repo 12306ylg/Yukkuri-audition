@@ -1,10 +1,8 @@
 import re
-import codecs
 import requests
 import warnings
 import urllib.parse
-import traceback
-from lxml import etree, html
+from lxml import html
 
 class ConverterClient:
     '''this class should be initilized as a client, then use req to translate chinese into japanese'''
