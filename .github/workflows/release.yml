@@ -1,5 +1,5 @@
 name: Build and Release
-
+#warn:NotImplemented
 on:
   push:
 
@@ -53,7 +53,7 @@ jobs:
           echo "Cleaned up build artifacts."
 
   release:
-    needs: build
+    needs: [check, build]
     if: needs.check.outputs.skip == 'false'
     runs-on: ubuntu-latest
     steps:
