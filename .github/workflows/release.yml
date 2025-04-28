@@ -17,6 +17,7 @@ jobs:
           else
             echo "Commit message does not start with 'rel', skipping build."
             echo "skip=true" >> $GITHUB_OUTPUT
+          fi
 
   build:
     needs: check
