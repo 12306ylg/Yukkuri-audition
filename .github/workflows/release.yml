@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check_commit_msg.outputs.skip }}
+    steps:
+      - name: Check commit message
+        id: check_commit_msg
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" == rel* ]]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            echo "Commit message does not start with 'rel', skipping build."
+            echo "skip=true" >> $GITHUB_OUTPUT
+
+  build:
+    needs: check
+    if: needs.check.outputs.skip == 'false'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: pyinstaller main.py --onefile
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-dist
+          path: dist/
+
+      - name: Clean up
+        run: |
+          rm -rf dist/*
+          echo "Cleaned up build artifacts."
+
+  release:
+    needs: build
+    if: needs.check.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-dist
+          path: dist/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
