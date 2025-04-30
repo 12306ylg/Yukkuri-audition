@@ -12,7 +12,7 @@ jobs:
       - name: Check commit message
         id: check_commit_msg
         run: |
-          if [[ "${{ github.event.head_commit.message }}" == rel* ]]; then
+          if [[ "${{ github.event.head_commit.message }}" == rel* || "${{ github.event_name }}" == 'workflow_dispatch' ]]; then
             echo "skip=false" >> $GITHUB_OUTPUT
           else
             echo "Commit message does not start with 'rel', skipping build."
