@@ -73,7 +73,7 @@ jobs:
           # 创建启动脚本
           @"
           @echo off
-          python_env\python.exe main.py
+          python_env\python.exe -m streamlit run main.py
           pause
           "@ | Out-File -FilePath "package\start.cmd" -Encoding ascii
           
@@ -110,6 +110,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.event.head_commit.message }}
           files: package/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
