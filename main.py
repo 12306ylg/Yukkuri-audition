@@ -24,6 +24,18 @@ def show_options():
         opt3.split('-')[0]
     ]
 
+def synthesize_audio(args):
+    idx, jp, file_path, user_options, aud_path = args
+    unique_id = uuid.uuid4().hex
+    aud_file_path = os.path.join(file_path, aud_path, f'YukAud_{unique_id}.mp3')
+    aud_file_path = aud_file_path.replace("\\", "/")
+    os.makedirs(os.path.dirname(aud_file_path), exist_ok=True)
+    p2_client = phaseTwo.yklRunner()  # 重新实例化 p2_client，因为子进程中无法共享对象
+    audio_bytes = p2_client.getAudio(jp, user_options[2], user_options[3])
+    with open(aud_file_path, 'wb+') as mp3file:
+        mp3file.write(audio_bytes)
+    return idx, aud_file_path
+
 def main():
     st.title("Yukkuri语音转换器")
     text_input_ways = ["从文件读取转换", "直接输入文本"]
@@ -68,7 +80,6 @@ def main():
         with st.spinner("##### 少女祈祷中...\n\n###### Now Loading..."):
             p1_request_client = phaseOne.ConverterClient()
             p1_resolve_client = phaseOne.ConverterResolve()
-            p2_client = phaseTwo.yklRunner()
             file_path = "Yukkuri_aud"
             file_path = file_path.replace("\\", "/")
             if not os.path.exists(file_path):
@@ -100,18 +111,8 @@ def main():
                     "日文片假名": jp,
                     "音频文件": None
                 })
-            def synthesize_audio(args):
-                idx, jp, file_path, user_options = args
-                unique_id = uuid.uuid4().hex
-                aud_file_path = os.path.join(file_path, aud_path, f'YukAud_{unique_id}.mp3')
-                aud_file_path = aud_file_path.replace("\\", "/")
-                os.makedirs(os.path.dirname(aud_file_path), exist_ok=True)
-                audio_bytes = p2_client.getAudio(jp, user_options[2], user_options[3])
-                with open(aud_file_path, 'wb+') as mp3file:
-                    mp3file.write(audio_bytes)
-                return idx, aud_file_path
             thread_count = st.session_state.get("thread_count", 1)
-            synth_args = [(idx, jp, file_path, st.session_state.user_options) for idx, jp in enumerate(jp_lines)]
+            synth_args = [(idx, jp, file_path, st.session_state.user_options, aud_path) for idx, jp in enumerate(jp_lines)]
             if thread_count == 1:
                 for idx, jp in enumerate(jp_lines):
                     time.sleep(0.01)
@@ -133,7 +134,7 @@ def main():
                     details[idx]["音频文件"] = aud_file_path
                     time.sleep(0.01)
             else:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count) as executor:
+                with concurrent.futures.ProcessPoolExecutor(max_workers=thread_count) as executor:
                     futures = {executor.submit(synthesize_audio, arg): arg[0] for arg in synth_args}
                     for future in concurrent.futures.as_completed(futures):
                         idx = futures[future]
