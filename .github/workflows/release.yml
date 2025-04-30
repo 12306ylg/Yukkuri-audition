@@ -35,12 +35,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
 
       - name: Package code and Python environment
         run: |
-          # Ensure the package directory is clean
-          rm package -Recurse -Force
           mkdir package
           # Copy code files, excluding the package directory itself
           Get-ChildItem -Path . -Exclude package | ForEach-Object {
@@ -67,13 +65,13 @@ jobs:
 
       - name: Clean up
         run: |
-          rm -rf package/
+          rm package/  -Recurse -Force
           echo "Cleaned up build artifacts."
 
   release:
     needs: [check, build]
     if: needs.check.outputs.skip == 'false'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Download package artifact
         uses: actions/download-artifact@v4
