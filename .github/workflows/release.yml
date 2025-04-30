@@ -39,23 +39,39 @@ jobs:
 
       - name: Package code and Python environment
         run: |
+          # 清理并重新创建package目录
+          if (Test-Path package) {
+            Remove-Item package -Recurse -Force
+          }
           mkdir package
-          # Copy code files, excluding the package directory itself
+          
+          # 复制代码文件，排除package目录
           Get-ChildItem -Path . -Exclude package -Recurse | ForEach-Object {
-            if ($_.PSIsContainer) {
-              Copy-Item -Recurse -Path $_.FullName -Destination package
-            } else {
-              Copy-Item -Path $_.FullName -Destination package
+            try {
+              if ($_.PSIsContainer) {
+                Copy-Item -Recurse -Path $_.FullName -Destination package -ErrorAction Stop
+              } else {
+                Copy-Item -Path $_.FullName -Destination package -ErrorAction Stop
+              }
+            } catch {
+              Write-Warning "无法复制 $($_.FullName): $_"
             }
           }
-          # Copy Python executable and libraries
+          
+          # 复制Python环境
           ${{ steps.cp313.outputs.python-path }} > python_path.txt
-          set /p PYTHON_PATH=<python_path.txt
-          xcopy "%PYTHON_PATH%\.." package\python_env\ /E /H /C /I
-          # Create a cmd script to start the program
-          echo "@echo off" > package\start.cmd
-          echo "python_env\\python.exe main.py" >> package\start.cmd
-          echo "pause" >> package\start.cmd
+          $PYTHON_PATH = Get-Content python_path.txt
+          if (!(Test-Path "package\python_env")) {
+            mkdir "package\python_env"
+          }
+          xcopy "$PYTHON_PATH\.." "package\python_env\" /E /H /C /I /Y
+          
+          # 创建启动脚本
+          @"
+          @echo off
+          python_env\python.exe main.py
+          pause
+          "@ | Out-File -FilePath "package\start.cmd" -Encoding ascii
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
