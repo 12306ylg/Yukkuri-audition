@@ -85,11 +85,19 @@ jobs:
             Write-Error "Package creation failed"
             exit 1
           }
+      - name: Create ZIP package
+        run: |
+          $zipPath = "Yukkuri-audition_Win64.zip"
+          if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force
+          }
+          Compress-Archive -Path package/* -DestinationPath $zipPath -CompressionLevel Optimal
+          Write-Host "ZIP package created at $zipPath"
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
           name: packaged-code
-          path: package/
+          path: package/Yukkuri-audition_Win64.zip
 
       - name: Clean up
         run: |
@@ -105,13 +113,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: packaged-code
-          path: package/
+          path: package/Yukkuri-audition_Win64.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.event.head_commit.message }}
-          files: package/*
+          files: package/Yukkuri-audition_Win64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
