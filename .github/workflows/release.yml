@@ -41,7 +41,7 @@ jobs:
         run: |
           mkdir package
           # Copy code files, excluding the package directory itself
-          Get-ChildItem -Path . -Exclude package | ForEach-Object {
+          Get-ChildItem -Path . -Exclude package -Recurse | ForEach-Object {
             if ($_.PSIsContainer) {
               Copy-Item -Recurse -Path $_.FullName -Destination package
             } else {
