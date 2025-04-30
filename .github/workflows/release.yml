@@ -45,13 +45,14 @@ jobs:
           }
           mkdir package
           
-          # 复制代码文件，排除package目录
-          Get-ChildItem -Path . -Exclude package -Recurse | ForEach-Object {
+          # 复制代码文件，排除特定目录和文件
+          Get-ChildItem -Path . -Exclude @('package', '.git', '.github') | ForEach-Object {
             try {
+              $destPath = Join-Path "package" $_.Name
               if ($_.PSIsContainer) {
-                Copy-Item -Recurse -Path $_.FullName -Destination package -ErrorAction Stop
+                Copy-Item -Path $_.FullName -Destination $destPath -Recurse -Force -ErrorAction Stop
               } else {
-                Copy-Item -Path $_.FullName -Destination package -ErrorAction Stop
+                Copy-Item -Path $_.FullName -Destination $destPath -Force -ErrorAction Stop
               }
             } catch {
               Write-Warning "无法复制 $($_.FullName): $_"
@@ -59,12 +60,15 @@ jobs:
           }
           
           # 复制Python环境
-          ${{ steps.cp313.outputs.python-path }} > python_path.txt
-          $PYTHON_PATH = Get-Content python_path.txt
+          $PYTHON_PATH = "${{ steps.cp313.outputs.python-path }}"
+          $PYTHON_DIR = Split-Path -Parent $PYTHON_PATH
+          
           if (!(Test-Path "package\python_env")) {
             mkdir "package\python_env"
           }
-          xcopy "$PYTHON_PATH\.." "package\python_env\" /E /H /C /I /Y
+          
+          # 使用Robocopy替代xcopy
+          robocopy "$PYTHON_DIR" "package\python_env" /E /NFL /NDL /NJH /NJS /nc /ns /np
           
           # 创建启动脚本
           @"
@@ -72,7 +76,15 @@ jobs:
           python_env\python.exe main.py
           pause
           "@ | Out-File -FilePath "package\start.cmd" -Encoding ascii
-
+          
+          # 检查结果
+          if (Test-Path "package\start.cmd") {
+            Write-Host "Package creation completed successfully"
+            exit 0
+          } else {
+            Write-Error "Package creation failed"
+            exit 1
+          }
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
