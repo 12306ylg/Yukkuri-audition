@@ -39,11 +39,16 @@ jobs:
       - name: Package code and Python environment
         run: |
           # Ensure the package directory is clean
-          rm -rf package
-          mkdir -p package
+          rm package -Recurse -Force
+          mkdir package
           # Copy code files, excluding the package directory itself
-          shopt -s extglob
-          cp -r !(package) package/
+          Get-ChildItem -Path . -Exclude package | ForEach-Object {
+            if ($_.PSIsContainer) {
+              Copy-Item -Recurse -Path $_.FullName -Destination package
+            } else {
+              Copy-Item -Path $_.FullName -Destination package
+            }
+          }
           # Copy Python executable and libraries
           ${{ steps.cp313.outputs.python-path }} > python_path.txt
           set /p PYTHON_PATH=<python_path.txt
