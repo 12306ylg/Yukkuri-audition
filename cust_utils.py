@@ -1,12 +1,12 @@
-﻿from yklConverter import phaseOne
-from yklConverter import phaseTwo
+﻿from yklConverter import phase_one
+from yklConverter import phase_two
 import os
 import re
 
 def transform_request(text:str, output_dir:str, phase1_option:str, phase1_option_ext:str, phase2_voice:str, phase2_type:str):
-    p1requestClient = phaseOne.ConverterClient()
-    p1resolveClient = phaseOne.ConverterResolve()
-    p2client = phaseTwo.yklRunner()
+    p1requestClient = phase_one.OnlineConverter.ConverterClient()
+    p1resolveClient = phase_one.OnlineConverter.ConverterResolve()
+    p2client = phase_two.yklRunner()
 
     filename = "Yukkuri_aud"
     file_path = os.path.join(output_dir, filename)
@@ -28,8 +28,8 @@ def transform_request(text:str, output_dir:str, phase1_option:str, phase1_option
     chinese_texts_raw = text.splitlines()
 
     ch_text = []
-    for i in range(0, len(chinese_texts_raw)):
-        ch_text = ch_text + [chinese_texts_raw[i].strip()]
+    for i, line in enumerate(chinese_texts_raw):
+        ch_text = ch_text + [line]
         print(ch_text[i])
 
     # 处理细节收集

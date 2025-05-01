@@ -145,5 +145,6 @@ jobs:
           tag_name: rel-${{ github.run_number }}
           name: "This release is created by GitHub Actions"
           files: Yukkuri-audition_Win64.zip
+          
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

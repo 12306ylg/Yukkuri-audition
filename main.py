@@ -5,39 +5,56 @@ import time
 import chardet
 import streamlit as st
 import concurrent.futures
-from yklConverter import phaseOne, phaseTwo
+from yklConverter import phase_one, phase_two
 
 def show_options():
-    opt1 = st.selectbox("选项1", ['ウォ', 'ウォ3', '我(ウォ)', '我(ウォ3)'], key="opt1")
-    opt2 = st.selectbox("选项2", ['全角片假', '半角假名', '平假名'], key="opt2")
+    opt2 = st.selectbox("选项", ['全角片假', '平假名'], key="opt2")
     opt3 = st.selectbox("声线", [
         'AT1-F1', 'AT1-F2', 'AT1-M1', 'AT1-M2', 'AT1-DVD', 'AT1-IMD1', 'AT1-JGR', 'AT1-R1',
         'AT2-RM', 'AT2-HUSKEY', 'AT2-M4B', 'AT2-MF1', 'AT2-RB2', 'AT2-RB3', 'AT2-ROBO',
         'AT2-YUKKURI', 'AT2-F4', 'AT2-M5', 'AT2-MF2', 'AT2-RM3'
     ], key="opt3")
-    option1_dict = {'ウォ': '1', 'ウォ3': '2', '我(ウォ)': '3', '我(ウォ3)': '4'}
-    option2_dict = {'全角片假': 'zenkaku', '半角假名': 'hankaku', '平假名': 'hirigana'}
+    option2_dict = {'全角片假': 'zenkaku', '平假名': 'hirigana'}
     return [
-        option1_dict[opt1],
         option2_dict[opt2],
         opt3.split('-')[1].lower(),
         opt3.split('-')[0]
     ]
 
 def synthesize_audio(args):
-    idx, jp, file_path, user_options, aud_path = args
+    idx, seq, jp, file_path, user_options, aud_path = args
     unique_id = uuid.uuid4().hex
-    aud_file_path = os.path.join(file_path, aud_path, f'YukAud_{unique_id}.mp3')
+    aud_file_path = os.path.join(file_path, aud_path, f'YukAud_{seq}.mp3')
     aud_file_path = aud_file_path.replace("\\", "/")
     os.makedirs(os.path.dirname(aud_file_path), exist_ok=True)
-    p2_client = phaseTwo.yklRunner()  # 重新实例化 p2_client，因为子进程中无法共享对象
-    audio_bytes = p2_client.getAudio(jp, user_options[2], user_options[3])
+    p2_client = phase_two.yklRunner()  
+    audio_bytes = p2_client.getAudio(jp, user_options[1], user_options[2])
     with open(aud_file_path, 'wb+') as mp3file:
         mp3file.write(audio_bytes)
     return idx, aud_file_path
 
+def get_start_seq(dir_path):
+    counter_file = os.path.join(dir_path, "counter.txt")
+    if os.path.exists(counter_file):
+        with open(counter_file, "r") as f:
+            try:
+                start_seq = int(f.read().strip())
+            except Exception:
+                start_seq = 1
+    else:
+        start_seq = 1
+    return start_seq
+
+def update_counter(dir_path, new_seq):
+    counter_file = os.path.join(dir_path, "counter.txt")
+    with open(counter_file, "w") as f:
+        f.write(str(new_seq))
+
 def main():
     st.title("Yukkuri语音转换器")
+    conversion_mode = st.radio("选择中文转换模式", ["在线转换（慢，稳定）", "本地转换（快一点）"], index=0)
+    st.session_state.conversion_mode = conversion_mode
+
     text_input_ways = ["从文件读取转换", "直接输入文本"]
     selected_input_method = st.selectbox("选择输入方式", text_input_ways)
     st.warning("注意一行一句")
@@ -61,7 +78,7 @@ def main():
             st.warning("请上传文本文件")
     else:
         text = st.text_area("请输入文本内容：", "附魔附魔")
-    aud_path = st.text_input(f"请输入保存文件夹\n（如果是相对路径，音频会存在`{os.path.join(os.getcwd(),'Yukkuri_aud')}`）：", placeholder="不分类默认留空就好了") 
+    aud_path = st.text_input(f"请输入保存文件夹\n（如果是相对路径，音频会存在`{os.path.join(os.getcwd(),'Yukkuri_aud')}`）：", placeholder="不分类默认留空就好了，建议每个工程都独立一个文件夹") 
     if aud_path and re.search(r'[<>:"/\\|?*]', aud_path):
         st.error("路径中包含非法字符，请重新输入。")
         return
@@ -78,32 +95,31 @@ def main():
             st.warning("请先输入文本")
             return
         with st.spinner("##### 少女祈祷中...\n\n###### Now Loading..."):
-            p1_request_client = phaseOne.ConverterClient()
-            p1_resolve_client = phaseOne.ConverterResolve()
+            
             file_path = "Yukkuri_aud"
             file_path = file_path.replace("\\", "/")
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
-            pattern = re.compile(r"YukAud(\d+)\.mp3")
-            max_i = 0
-            for file_name in os.listdir(file_path):
-                match = pattern.match(file_name)
-                if match:
-                    i = int(match.group(1))
-                    max_i = max(max_i, i)
+            # 读取持久化计数器获得起始序号
+            start_seq = get_start_seq(file_path)
             lines = [line.strip() for line in text.splitlines()]
             details = []
             detail_placeholder = st.empty()
             jp_lines = []
             for idx, raw in enumerate(lines):
                 detail_placeholder.markdown(f"正在处理第{idx+1}句：{raw}")
-                jp = p1_resolve_client.resolve(
-                    p1_request_client.post_request(
-                        raw,
-                        st.session_state.user_options[0],
-                        st.session_state.user_options[1]
+                if st.session_state.conversion_mode == "在线转换":
+                    p1_request_client = phase_one.OnlineConverter.ConverterClient()
+                    p1_resolve_client = phase_one.OnlineConverter.ConverterResolve()
+                    jp = p1_resolve_client.resolve(
+                        p1_request_client.post_request(
+                            raw,
+                            st.session_state.user_options[0]
+                        )
                     )
-                )
+                else:
+                    jp = phase_one.OfflineConverter.chinese_to_kana(raw, mode=st.session_state.user_options[0])
+                    print(jp)
                 jp_lines.append(jp)
                 details.append({
                     "index": idx + 1,
@@ -112,23 +128,23 @@ def main():
                     "音频文件": None
                 })
             thread_count = st.session_state.get("thread_count", 1)
-            synth_args = [(idx, jp, file_path, st.session_state.user_options, aud_path) for idx, jp in enumerate(jp_lines)]
+            # 在生成每句的语音时，将序号作为 seq 传入任务中
+            synth_args = [(idx, start_seq + idx, jp, file_path, st.session_state.user_options, aud_path) for idx, jp in enumerate(jp_lines)]
             if thread_count == 1:
+                p2_client = phase_two.yklRunner()
                 for idx, jp in enumerate(jp_lines):
                     time.sleep(0.01)
-                    max_i += 1
-                    safe_text = re.sub(r'[\\/:*?"<>|]', '', lines[idx][:10])
-                    base_name = f'YukAud{max_i}_{safe_text}'
+                    seq = start_seq + idx
+                    base_name = f'YukAud{seq}'
                     aud_file_path = os.path.join(file_path, f'{base_name}.mp3').replace("\\", "/")
                     count = 1
                     while os.path.exists(aud_file_path):
                         aud_file_path = os.path.join(file_path, f'{base_name}_{count}.mp3').replace("\\", "/")
                         count += 1
                     with open(aud_file_path, 'wb') as mp3file:
-                        audio_bytes = p2_client.getAudio(jp, st.session_state.user_options[2], st.session_state.user_options[3])
+                        audio_bytes = p2_client.getAudio(jp, st.session_state.user_options[1], st.session_state.user_options[2])
                         if not ismp3(audio_bytes):
                             st.warning(f"第{idx+1}句音频无效，跳过。")
-                            max_i -= 1
                             continue
                         mp3file.write(audio_bytes)
                     details[idx]["音频文件"] = aud_file_path
@@ -144,7 +160,8 @@ def main():
                         except (concurrent.futures.TimeoutError, OSError) as e:
                             st.error(f"第{str(details[idx])}句音频合成失败: {str(e)}")
                         time.sleep(0.05)
-                max_i += len(jp_lines)
+            # 更新计数器，新计数器为起始序号加上本次生成音频的行数
+            update_counter(file_path, start_seq + len(jp_lines))
             st.success("转化完成！哇多么好的音频啊！")
             st.info(f"音频文件保存在：{file_path}")
             with st.expander("处理细节"):

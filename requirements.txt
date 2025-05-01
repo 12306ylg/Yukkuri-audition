@@ -2,3 +2,4 @@ streamlit
 chardet
 requests
 lxml
+jaconv
