@@ -3,4 +3,4 @@ chardet
 requests
 lxml
 jaconv
-pypingyin
+pypinyin
