@@ -97,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packaged-code
-          path: package/Yukkuri-audition_Win64.zip
+          path: Yukkuri-audition_Win64.zip
 
       - name: Clean up
         run: |
