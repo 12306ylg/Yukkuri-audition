@@ -132,10 +132,17 @@ jobs:
             Write-Error "Downloaded ZIP package does not exist."
           }
 
+      - name: Create Tag
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag rel-${{ github.run_number }}
+          git push origin rel-${{ github.run_number }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.head_commit.message }}
+          tag_name: rel-${{ github.run_number }}
           name: "This release is created by GitHub Actions"
           files: Yukkuri-audition_Win64.zip
         env:
