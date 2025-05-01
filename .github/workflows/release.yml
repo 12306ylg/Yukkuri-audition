@@ -146,7 +146,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: rel-${{ github.run_number }}
-          name: "This release is created by GitHub Actions"
+          name: "rel-${{ github.run_number }}"
           files: Yukkuri-audition_Win64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
