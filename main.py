@@ -12,7 +12,9 @@ def show_options():
     opt3 = st.selectbox("声线", [
         'AT1-F1', 'AT1-F2', 'AT1-M1', 'AT1-M2', 'AT1-DVD', 'AT1-IMD1', 'AT1-JGR', 'AT1-R1',
         'AT2-RM', 'AT2-HUSKEY', 'AT2-M4B', 'AT2-MF1', 'AT2-RB2', 'AT2-RB3', 'AT2-ROBO',
-        'AT2-YUKKURI', 'AT2-F4', 'AT2-M5', 'AT2-MF2', 'AT2-RM3'
+        'AT2-YUKKURI', 'AT2-F4', 'AT2-M5', 'AT2-MF2', 'AT2-RM3','AT10-F1', 'AT10-F2','AT10-F3', 
+        'AT10-M1','AT10-M2','AT10-R1','AT10-R2'
+
     ], key="opt3")
     option2_dict = {'全角片假': 'zenkaku', '平假名': 'hirigana'}
     return [
@@ -28,7 +30,7 @@ def synthesize_audio(args):
     aud_file_path = aud_file_path.replace("\\", "/")
     os.makedirs(os.path.dirname(aud_file_path), exist_ok=True)
     p2_client = phase_two.yklRunner()  
-    audio_bytes = p2_client.getAudio(jp, user_options[1], user_options[2])
+    audio_bytes = p2_client.get(jp, user_options[1], user_options[2])
     with open(aud_file_path, 'wb+') as mp3file:
         mp3file.write(audio_bytes)
     return idx, aud_file_path
@@ -142,7 +144,7 @@ def main():
                         aud_file_path = os.path.join(file_path, f'{base_name}_{count}.mp3').replace("\\", "/")
                         count += 1
                     with open(aud_file_path, 'wb') as mp3file:
-                        audio_bytes = p2_client.getAudio(jp, st.session_state.user_options[1], st.session_state.user_options[2])
+                        audio_bytes = p2_client.get(jp, st.session_state.user_options[1], st.session_state.user_options[2])
                         if not ismp3(audio_bytes):
                             st.warning(f"第{idx+1}句音频无效，跳过。")
                             continue

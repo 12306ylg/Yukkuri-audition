@@ -53,7 +53,7 @@ def transform_request(text:str, output_dir:str, phase1_option:str, phase1_option
         aud_file_path = os.path.join(file_path, f'YukAud{max_i}.mp3')
         aud_file_path = aud_file_path.replace("\\", "/")
         with open(aud_file_path, 'wb') as mp3file:
-            mp3file.write(p2client.getAudio(jp, phase2_voice, phase2_type))
+            mp3file.write(p2client.get(jp, phase2_voice, phase2_type))
         details[idx]["音频文件"] = aud_file_path
 
     return aud_file_path, max_i, details
